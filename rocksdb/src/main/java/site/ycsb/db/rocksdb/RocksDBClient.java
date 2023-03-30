@@ -103,6 +103,13 @@ public class RocksDBClient extends DB {
 
     RocksDB.loadLibrary();
     OptionsUtil.loadOptionsFromFile(optionsFile.toAbsolutePath().toString(), Env.getDefault(), options, cfDescriptors);
+    /*CY*/
+    final BlockBasedTableConfig blockbasedtableconfig = new BlockBasedTableConfig();
+    final BloomFilter bloomfilter = new BloomFilter(20, false);
+    blockbasedtableconfig.setFilterPolicy(bloomfilter);
+    final Statistics stats = new Statistics();
+    options.setStatistics(stats);
+    /*CY*/
     dbOptions = options;
 
     final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
@@ -111,6 +118,9 @@ public class RocksDBClient extends DB {
       String cfName = new String(cfDescriptors.get(i).getName());
       final ColumnFamilyHandle cfHandle = cfHandles.get(i);
       final ColumnFamilyOptions cfOptions = cfDescriptors.get(i).getOptions();
+      /*CY*/
+      cfOptions.setTableFormatConfig(blockbasedtableconfig);
+      /*CY*/
 
       COLUMN_FAMILIES.put(cfName, new ColumnFamily(cfHandle, cfOptions));
     }
@@ -146,6 +156,7 @@ public class RocksDBClient extends DB {
     }
 
     final int rocksThreads = Runtime.getRuntime().availableProcessors() * 2;
+
 
     if(cfDescriptors.isEmpty()) {
       final Options options = new Options()
@@ -201,7 +212,7 @@ public class RocksDBClient extends DB {
           rocksDbDir = null;
         }
 
-      } catch (final IOException e) {
+      } catch (final IOException e) { 
         throw new DBException(e);
       } finally {
         references--;
