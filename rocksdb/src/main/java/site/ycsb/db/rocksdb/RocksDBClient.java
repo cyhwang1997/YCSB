@@ -56,6 +56,7 @@ public class RocksDBClient extends DB {
 
   private static final ConcurrentMap<String, ColumnFamily> COLUMN_FAMILIES = new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, Lock> COLUMN_FAMILY_LOCKS = new ConcurrentHashMap<>();
+//  static final Statistics DBSTATS  = new Statistics();
 
   @Override
   public void init() throws DBException {
@@ -188,6 +189,13 @@ public class RocksDBClient extends DB {
 
   @Override
   public void cleanup() throws DBException {
+    /*CY*/
+    final DBOptions options = (DBOptions)dbOptions;
+    final Statistics st = options.statistics();
+    System.out.println(st);
+//    Statistics dbstats = dbOptions.statistics();
+//    System.out.println(dbstats);
+    /*CY*/
     super.cleanup();
 
     synchronized (RocksDBClient.class) {
