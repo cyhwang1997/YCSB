@@ -113,7 +113,7 @@ public class RocksDBClient extends DB {
     /*CY*/
     dbOptions = options;
 
-//    final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
+    final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
 
     for(int i = 0; i < cfDescriptors.size(); i++) {
       String cfName = new String(cfDescriptors.get(i).getName());
@@ -121,17 +121,16 @@ public class RocksDBClient extends DB {
       final ColumnFamilyHandle cfHandle = cfHandles.get(i);
       final ColumnFamilyOptions cfOptions = cfDescriptors.get(i).getOptions();
       /*CY*/
-//      cfOptions.setTableFormatConfig(blockBasedTableConfig);
-//      final BlockBasedTableConfig cfTableFormat = (BlockBasedTableConfig)cfOptions.tableFormatConfig();
-//      cfTableFormat.setFilter(bloomFilter);
-//      cfOptions.setTableFormatConfig(cfTableFormat);
-      cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilterPolicy(new BloomFilter(10)));
+      cfOptions.setTableFormatConfig(blockBasedTableConfig);
+      final BlockBasedTableConfig cfTableFormat = (BlockBasedTableConfig)cfOptions.tableFormatConfig();
+      cfTableFormat.setFilter(bloomFilter);
+      cfOptions.setTableFormatConfig(cfTableFormat);
+      System.out.println(cfOptions.tableFormatConfig());
       /*CY*/
       COLUMN_FAMILIES.put(cfName, new ColumnFamily(cfHandle, cfOptions));
 
       System.out.println(cfOptions.tableFactoryName());
     }
-    final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
 
     return db;
   }
