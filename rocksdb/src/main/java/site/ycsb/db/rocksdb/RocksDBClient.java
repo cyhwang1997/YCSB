@@ -105,9 +105,9 @@ public class RocksDBClient extends DB {
     RocksDB.loadLibrary();
     OptionsUtil.loadOptionsFromFile(optionsFile.toAbsolutePath().toString(), Env.getDefault(), options, cfDescriptors);
     /*CY*/
-    final BlockBasedTableConfig blockBasedTableConfig = new BlockBasedTableConfig();
-    final Filter bloomFilter = new BloomFilter(20, false);
-    blockBasedTableConfig.setFilter(bloomFilter);
+//    final BlockBasedTableConfig blockBasedTableConfig = new BlockBasedTableConfig();
+//    final Filter bloomFilter = new BloomFilter(20, false);
+//    blockBasedTableConfig.setFilter(bloomFilter);
     final Statistics stats = new Statistics();
     options.setStatistics(stats);
     /*CY*/
@@ -121,11 +121,7 @@ public class RocksDBClient extends DB {
       final ColumnFamilyHandle cfHandle = cfHandles.get(i);
       final ColumnFamilyOptions cfOptions = cfDescriptors.get(i).getOptions();
       /*CY*/
-      cfOptions.setTableFormatConfig(blockBasedTableConfig);
-      final BlockBasedTableConfig cfTableFormat = (BlockBasedTableConfig)cfOptions.tableFormatConfig();
-      cfTableFormat.setFilter(bloomFilter);
-      cfOptions.setTableFormatConfig(cfTableFormat);
-      System.out.println(cfOptions.tableFormatConfig());
+      cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(10, false)));
       /*CY*/
       COLUMN_FAMILIES.put(cfName, new ColumnFamily(cfHandle, cfOptions));
 
