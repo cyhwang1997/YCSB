@@ -148,14 +148,12 @@ public class RocksDBClient extends DB {
     final List<ColumnFamilyDescriptor> cfDescriptors = new ArrayList<>();
 
     for(final String cfName : cfNames) {
+      /*CY run goes here*/
       final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
           .optimizeLevelStyleCompaction();
       System.out.println("[CYDBG] "+ cfName);
       /*CY*/
-      final BlockBasedTableConfig blockbasedtableconfig = new BlockBasedTableConfig();
-      final Filter bloomFilter = new BloomFilter(20, false);
-      blockbasedtableconfig.setFilter(bloomFilter);
-      cfOptions.setTableFormatConfig(blockbasedtableconfig);
+      cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(20, false)));
       /*CY*/
       final ColumnFamilyDescriptor cfDescriptor = new ColumnFamilyDescriptor(
           cfName.getBytes(UTF_8),
@@ -169,6 +167,7 @@ public class RocksDBClient extends DB {
 
 
     if(cfDescriptors.isEmpty()) {
+    /*CY load goes here*/
       System.out.println("[CYDBG] cfDescriptors Empty\n");
       final Options options = new Options()
           .optimizeLevelStyleCompaction()
@@ -181,6 +180,7 @@ public class RocksDBClient extends DB {
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
+    /*CY run goes here*/
       System.out.println("[CYDBG] cfDescriptors NOT Empty\n");
       final DBOptions options = new DBOptions()
           .setCreateIfMissing(true)
