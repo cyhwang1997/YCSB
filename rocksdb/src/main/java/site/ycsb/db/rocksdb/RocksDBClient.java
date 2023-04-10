@@ -56,7 +56,6 @@ public class RocksDBClient extends DB {
 
   private static final ConcurrentMap<String, ColumnFamily> COLUMN_FAMILIES = new ConcurrentHashMap<>();
   private static final ConcurrentMap<String, Lock> COLUMN_FAMILY_LOCKS = new ConcurrentHashMap<>();
-//  static final Statistics DBSTATS  = new Statistics();
 
   @Override
   public void init() throws DBException {
@@ -94,6 +93,7 @@ public class RocksDBClient extends DB {
    * @return The initialized and open RocksDB instance.
    */
   private RocksDB initRocksDBWithOptionsFile() throws IOException, RocksDBException {
+    System.out.println("initRocksDBWithOptionsFile\n");
     if(!Files.exists(rocksDbDir)) {
       Files.createDirectories(rocksDbDir);
     }
@@ -105,26 +105,33 @@ public class RocksDBClient extends DB {
     RocksDB.loadLibrary();
     OptionsUtil.loadOptionsFromFile(optionsFile.toAbsolutePath().toString(), Env.getDefault(), options, cfDescriptors);
     /*CY*/
-    final BlockBasedTableConfig blockbasedtableconfig = new BlockBasedTableConfig();
-    final BloomFilter bloomfilter = new BloomFilter(20, false);
-    blockbasedtableconfig.setFilterPolicy(bloomfilter);
+    final BlockBasedTableConfig blockBasedTableConfig = new BlockBasedTableConfig();
+    final Filter bloomFilter = new BloomFilter(20, false);
+    blockBasedTableConfig.setFilter(bloomFilter);
     final Statistics stats = new Statistics();
     options.setStatistics(stats);
     /*CY*/
     dbOptions = options;
 
-    final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
+//    final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
 
     for(int i = 0; i < cfDescriptors.size(); i++) {
       String cfName = new String(cfDescriptors.get(i).getName());
+      System.out.println("[CYDBG] " + cfName);
       final ColumnFamilyHandle cfHandle = cfHandles.get(i);
       final ColumnFamilyOptions cfOptions = cfDescriptors.get(i).getOptions();
       /*CY*/
-      cfOptions.setTableFormatConfig(blockbasedtableconfig);
+//      cfOptions.setTableFormatConfig(blockBasedTableConfig);
+//      final BlockBasedTableConfig cfTableFormat = (BlockBasedTableConfig)cfOptions.tableFormatConfig();
+//      cfTableFormat.setFilter(bloomFilter);
+//      cfOptions.setTableFormatConfig(cfTableFormat);
+      cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilterPolicy(new BloomFilter(10)));
       /*CY*/
-
       COLUMN_FAMILIES.put(cfName, new ColumnFamily(cfHandle, cfOptions));
+
+      System.out.println(cfOptions.tableFactoryName());
     }
+    final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
 
     return db;
   }
@@ -148,6 +155,13 @@ public class RocksDBClient extends DB {
     for(final String cfName : cfNames) {
       final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
           .optimizeLevelStyleCompaction();
+      System.out.println("[CYDBG] "+ cfName);
+      /*CY*/
+      final BlockBasedTableConfig blockbasedtableconfig = new BlockBasedTableConfig();
+      final Filter bloomFilter = new BloomFilter(20, false);
+      blockbasedtableconfig.setFilter(bloomFilter);
+      cfOptions.setTableFormatConfig(blockbasedtableconfig);
+      /*CY*/
       final ColumnFamilyDescriptor cfDescriptor = new ColumnFamilyDescriptor(
           cfName.getBytes(UTF_8),
           cfOptions
@@ -160,16 +174,19 @@ public class RocksDBClient extends DB {
 
 
     if(cfDescriptors.isEmpty()) {
+      System.out.println("[CYDBG] cfDescriptors Empty\n");
       final Options options = new Options()
           .optimizeLevelStyleCompaction()
           .setCreateIfMissing(true)
           .setCreateMissingColumnFamilies(true)
           .setIncreaseParallelism(rocksThreads)
           .setMaxBackgroundCompactions(rocksThreads)
+          .setTableFormatConfig(new BlockBasedTableConfig().setFilterPolicy(new BloomFilter(10))) /*CY*/
           .setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
+      System.out.println("[CYDBG] cfDescriptors NOT Empty\n");
       final DBOptions options = new DBOptions()
           .setCreateIfMissing(true)
           .setCreateMissingColumnFamilies(true)
@@ -190,9 +207,9 @@ public class RocksDBClient extends DB {
   @Override
   public void cleanup() throws DBException {
     /*CY*/
-    final DBOptions options = (DBOptions)dbOptions;
-    final Statistics st = options.statistics();
-    System.out.println(st);
+//    final DBOptions options = (DBOptions)dbOptions;
+//    final Statistics st = options.statistics();
+//    System.out.println(st);
 //    Statistics dbstats = dbOptions.statistics();
 //    System.out.println(dbstats);
     /*CY*/
@@ -259,7 +276,7 @@ public class RocksDBClient extends DB {
 
       final ColumnFamilyHandle cf = COLUMN_FAMILIES.get(table).getHandle();
       try(final RocksIterator iterator = rocksDb.newIterator(cf)) {
-        int iterations = 0;
+        int iterations     = 0;
         for (iterator.seek(startkey.getBytes(UTF_8)); iterator.isValid() && iterations < recordcount;
              iterator.next()) {
           final HashMap<String, ByteIterator> values = new HashMap<>();
@@ -427,10 +444,12 @@ public class RocksDBClient extends DB {
     if (COLUMN_FAMILIES.containsKey("default")) {
       LOGGER.warn("no column family options for \"" + destinationCfName + "\" " +
                   "in options file - using options from \"default\"");
+      System.out.println("[CYDBG] CFdefault\n");
       cfOptions = COLUMN_FAMILIES.get("default").getOptions();
     } else {
       LOGGER.warn("no column family options for either \"" + destinationCfName + "\" or " +
                   "\"default\" in options file - initializing with empty configuration");
+      System.out.println("[CYDBG] CFdefaultnn\n");
       cfOptions = new ColumnFamilyOptions();
     }
     LOGGER.warn("Add a CFOptions section for \"" + destinationCfName + "\" to the options file, " +
@@ -452,8 +471,14 @@ public class RocksDBClient extends DB {
           // RocksDB requires all options files to include options for the "default" column family;
           // apply those options to this column family
           cfOptions = getDefaultColumnFamilyOptions(name);
+          /*CY*/
+          cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(10, false)));
+          /*CY*/
         } else {
           cfOptions = new ColumnFamilyOptions().optimizeLevelStyleCompaction();
+          /*CY*/
+          cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(10, false)));
+          /*CY*/
         }
 
         final ColumnFamilyHandle cfHandle = rocksDb.createColumnFamily(
