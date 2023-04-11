@@ -6,12 +6,12 @@ It uses rocksdb version 6.1.2.
 ## Changes
 file path: rocksdb/src/main/java/site/ycsb/db/rocksdb/RocksDBClient.java  
 
-### set Options
+### set Options for "default" column family
 funtion name : initRocksDB()  
 
 #### For Load
 if(cfDescriptors.isEmpty())    
-- - -
+This is for setting DBOptions and "default" column family options.  
 | Option | Code |
 |---|---|
 |filter\_policy|setTableFormatConfig(new BlockBasedTableConfig().setFilterPolicy(new BloomFilter(10)))|
@@ -20,12 +20,19 @@ if(cfDescriptors.isEmpty())
 
 #### For Run
 for(final String cfName : cfNames)  
-- - -
 | Option | Code |
 |---|---|
 |filter\_policy|cfOptions.setTableFormatConfig(new BlockBasedTableConfig().SetFilter(new BloomFilter(20, false)))|
 |report\_bg\_io\_stats|ccfOptions.setReportBgIoStats(true)|
 
+### set Options for "usertable" column family, in load
+function name : createColumnFamily()
+if (optionsFile != null) else  
+if{} is for with options file, else{} is for no options file  
+else{} is for setting "usertable" column family options.  
+|Option|Code|
+|---|---|
+|filter\_policy|cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(10, false)))|
 
 ### Print Statistics
 function name : initRocksDB()  

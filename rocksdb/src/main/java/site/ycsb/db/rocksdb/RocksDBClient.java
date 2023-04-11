@@ -180,6 +180,7 @@ public class RocksDBClient extends DB {
           .setStatsDumpPeriodSec(10) /*CY*/
           .setMaxBackgroundJobs(2) /*CY*/
           .setStatistics(new Statistics()) /*CY*/
+          .setReportBgIoStats(true) /*CY*/
           .setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
@@ -198,6 +199,8 @@ public class RocksDBClient extends DB {
       final List<ColumnFamilyHandle> cfHandles = new ArrayList<>();
       final RocksDB db = RocksDB.open(options, rocksDbDir.toAbsolutePath().toString(), cfDescriptors, cfHandles);
       for(int i = 0; i < cfNames.size(); i++) {
+        /*CY run goes here, load doesn't*/
+        System.out.println("[CYDBG] " + cfNames.get(i));
         COLUMN_FAMILIES.put(cfNames.get(i), new ColumnFamily(cfHandles.get(i), cfOptionss.get(i)));
       }
       return db;
@@ -220,15 +223,15 @@ public class RocksDBClient extends DB {
             cf.getHandle().close();
           }
           /*CY for load. comment it out when doing run*/
-/*          final Options options = (Options)dbOptions;
+          final Options options = (Options)dbOptions;
           final Statistics st = options.statistics();
-          System.out.println(st);*/
+          System.out.println(st);
           /*CY*/
 
           /*CY for run. comment it out when doing load*/
-          final DBOptions dboptions = (DBOptions)dbOptions;
+/*          final DBOptions dboptions = (DBOptions)dbOptions;
           final Statistics dbst = dboptions.statistics();
-          System.out.println(dbst);
+          System.out.println(dbst);*/
           /*CY*/
 
           rocksDb.close();
@@ -468,6 +471,7 @@ public class RocksDBClient extends DB {
   }
 
   private void createColumnFamily(final String name) throws RocksDBException {
+    System.out.println("[CYDBG] createColumnFamily: " + name);
     COLUMN_FAMILY_LOCKS.putIfAbsent(name, new ReentrantLock());
 
     final Lock l = COLUMN_FAMILY_LOCKS.get(name);
@@ -480,13 +484,14 @@ public class RocksDBClient extends DB {
           // RocksDB requires all options files to include options for the "default" column family;
           // apply those options to this column family
           cfOptions = getDefaultColumnFamilyOptions(name);
-          /*CY*/
+          /*CY
           cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(10, false)));
-          /*CY*/
+          CY*/
         } else {
           cfOptions = new ColumnFamilyOptions().optimizeLevelStyleCompaction();
-          /*CY*/
+          /*CY, in load, sets options for "usertable" column family*/
           cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(10, false)));
+          cfOptions.setReportBgIoStats(true);
           /*CY*/
         }
 
