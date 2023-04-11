@@ -153,7 +153,7 @@ public class RocksDBClient extends DB {
       final ColumnFamilyOptions cfOptions = new ColumnFamilyOptions()
           .optimizeLevelStyleCompaction();
       System.out.println("[CYDBG] "+ cfName);
-      /*CY*/
+      /*CY for run*/
       cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(20, false)));
       cfOptions.setReportBgIoStats(true);
       /*CY*/
