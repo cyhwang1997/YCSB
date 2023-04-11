@@ -93,7 +93,7 @@ public class RocksDBClient extends DB {
    * @return The initialized and open RocksDB instance.
    */
   private RocksDB initRocksDBWithOptionsFile() throws IOException, RocksDBException {
-    System.out.println("initRocksDBWithOptionsFile\n");
+    System.out.println("[CYDBG] initRocksDBWithOptionsFile\n");
     if(!Files.exists(rocksDbDir)) {
       Files.createDirectories(rocksDbDir);
     }
@@ -139,6 +139,7 @@ public class RocksDBClient extends DB {
    * @return The initialized and open RocksDB instance.
    */
   private RocksDB initRocksDB() throws IOException, RocksDBException {
+    System.out.println("[CYDBG] initRocksDB");
     if(!Files.exists(rocksDbDir)) {
       Files.createDirectories(rocksDbDir);
     }
@@ -154,6 +155,7 @@ public class RocksDBClient extends DB {
       System.out.println("[CYDBG] "+ cfName);
       /*CY*/
       cfOptions.setTableFormatConfig(new BlockBasedTableConfig().setFilter(new BloomFilter(20, false)));
+      cfOptions.setReportBgIoStats(true);
       /*CY*/
       final ColumnFamilyDescriptor cfDescriptor = new ColumnFamilyDescriptor(
           cfName.getBytes(UTF_8),
@@ -165,7 +167,6 @@ public class RocksDBClient extends DB {
 
     final int rocksThreads = Runtime.getRuntime().availableProcessors() * 2;
 
-
     if(cfDescriptors.isEmpty()) {
     /*CY load goes here*/
       System.out.println("[CYDBG] cfDescriptors Empty\n");
@@ -176,17 +177,21 @@ public class RocksDBClient extends DB {
           .setIncreaseParallelism(rocksThreads)
           .setMaxBackgroundCompactions(rocksThreads)
           .setTableFormatConfig(new BlockBasedTableConfig().setFilterPolicy(new BloomFilter(10))) /*CY*/
+          .setStatsDumpPeriodSec(10) /*CY*/
+          .setMaxBackgroundJobs(2) /*CY*/
+          .setStatistics(new Statistics()) /*CY*/
           .setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
       dbOptions = options;
       return RocksDB.open(options, rocksDbDir.toAbsolutePath().toString());
     } else {
-    /*CY run goes here*/
+      /*CY run goes here*/
       System.out.println("[CYDBG] cfDescriptors NOT Empty\n");
       final DBOptions options = new DBOptions()
           .setCreateIfMissing(true)
           .setCreateMissingColumnFamilies(true)
           .setIncreaseParallelism(rocksThreads)
           .setMaxBackgroundCompactions(rocksThreads)
+          .setStatistics(new Statistics()) /*CY*/
           .setInfoLogLevel(InfoLogLevel.INFO_LEVEL);
       dbOptions = options;
 
@@ -202,11 +207,9 @@ public class RocksDBClient extends DB {
   @Override
   public void cleanup() throws DBException {
     /*CY*/
-//    final DBOptions options = (DBOptions)dbOptions;
-//    final Statistics st = options.statistics();
-//    System.out.println(st);
-//    Statistics dbstats = dbOptions.statistics();
-//    System.out.println(dbstats);
+/*    final Options options = (Options)dbOptions;
+    final Statistics st = options.statistics();
+    System.out.println(st);*/
     /*CY*/
     super.cleanup();
 
@@ -216,6 +219,17 @@ public class RocksDBClient extends DB {
           for (final ColumnFamily cf : COLUMN_FAMILIES.values()) {
             cf.getHandle().close();
           }
+          /*CY for load. comment it out when doing run*/
+/*          final Options options = (Options)dbOptions;
+          final Statistics st = options.statistics();
+          System.out.println(st);*/
+          /*CY*/
+
+          /*CY for run. comment it out when doing load*/
+          final DBOptions dboptions = (DBOptions)dbOptions;
+          final Statistics dbst = dboptions.statistics();
+          System.out.println(dbst);
+          /*CY*/
 
           rocksDb.close();
           rocksDb = null;
